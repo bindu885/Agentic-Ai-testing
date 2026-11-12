@@ -9,7 +9,7 @@ belong to `sanket-thorat/cloud-upskilling-code-review-bot`.
 
 ```text
 PR in bindu885/Agentic-Ai-testing
-  -> send repository, PR number, and head SHA to the reviewer repo
+  -> create an empty request commit on the reviewer's feature branch
   -> cloud-upskilling-code-review-bot fetches the PR's changed code
   -> your configured model reviews it against your guidelines
   -> central Actions run uploads findings and links results from the PR
@@ -17,13 +17,20 @@ PR in bindu885/Agentic-Ai-testing
 
 In this repository's **Settings > Secrets and variables > Actions**, add only
 `REVIEW_DISPATCH_TOKEN`: a token authorized for contents-write access to the
-reviewer repository, needed to send `repository_dispatch` events. Do not put
-model settings or API keys here. Fork PRs are skipped.
+reviewer repository, needed to create an empty commit and advance only
+`feature/core-review-bot` without force. Despite its retained name, this token
+no longer sends `repository_dispatch` events. Do not put model settings or API
+keys here. Fork PRs are skipped.
 
-Complete the model, token, and default-branch setup in the original repository:
-[central setup guide](https://github.com/sanket-thorat/cloud-upskilling-code-review-bot/blob/HEAD/docs/week6/testing-external-repository.md).
-The central workflow and complete implementation must be on its DEFAULT branch
-before dispatch events can run it. A feature-branch-only push is not enough.
+Complete the model and token setup in the original repository:
+[central setup guide](https://github.com/sanket-thorat/cloud-upskilling-code-review-bot/blob/feature/core-review-bot/docs/week6/testing-external-repository.md).
+Push the updated central workflow and complete reviewer implementation to
+`feature/core-review-bot`; the reviewer does NOT need a merge into `main`.
+The application sample and notification workflow can be merged into this repo's
+`main` before creating a defect PR. Each request adds a metadata-only commit to
+the reviewer branch; it never changes reviewer files. GitHub Actions must be
+enabled in both repositories. Use a PAT or GitHub App token for requests, not
+the application's automatic `GITHUB_TOKEN`.
 
 ## Run the Sample
 
@@ -82,7 +89,10 @@ diff, using related files as context; it is not a blanket scan of every old file
 The application Actions run only confirms that the request was sent. The model
 runs under **Actions > Review external application PR** in the reviewer repo.
 After successful analysis, the PR receives a comment linking that run's report
-and decision packet. A green dispatch run alone does not mean analysis passed.
+and decision packet. A green request run alone does not mean analysis passed.
+Filter the central Actions page by branch `feature/core-review-bot` if needed.
+The initial workflow deployment push has no request marker, so its review job
+is skipped; a subsequent application PR event starts the actual review.
 
 Opening, pushing commits to, or reopening a same-repository PR sends a request.
 The existing human-review gate is preserved: a results-link comment is posted
