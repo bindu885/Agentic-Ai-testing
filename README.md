@@ -105,3 +105,5 @@ The existing human-review gate is preserved: a results-link comment is posted
 automatically, but inline findings and approve/request-changes reviews still
 require human decisions. Nothing is auto-accepted. Readers need access to the
 reviewer repo to download its artifacts.
+
+
