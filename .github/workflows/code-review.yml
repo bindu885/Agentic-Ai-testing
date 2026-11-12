@@ -1,0 +1,82 @@
+name: Review PR on command
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: review-command-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  request-review:
+    if: github.event.issue.pull_request && github.event.comment.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate command and fetch the latest PR head
+        id: command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (!/^PR-Review$/i.test(context.payload.comment.body.trim())) return;
+            const {owner, repo} = context.repo;
+            const {data: permission} = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner, repo, username: context.payload.comment.user.login
+            });
+            if (!['admin', 'maintain', 'write'].includes(permission.permission)) {
+              core.notice('Only repository writers can request AI review');
+              return;
+            }
+            const {data: pull} = await github.rest.pulls.get({owner, repo, pull_number: context.issue.number});
+            if (pull.state !== 'open' || pull.head.repo?.full_name !== `${owner}/${repo}`) {
+              core.notice('Only open same-repository PRs are supported');
+              return;
+            }
+            core.setOutput('requested', 'true');
+            core.setOutput('head', pull.head.sha);
+
+      - name: Request the central reviewer
+        id: dispatch
+        if: steps.command.outputs.requested == 'true'
+        uses: actions/github-script@v7
+        env:
+          TARGET_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          PR_HEAD_SHA: ${{ steps.command.outputs.head }}
+        with:
+          github-token: ${{ secrets.REVIEW_DISPATCH_TOKEN }}
+          script: |
+            const owner = 'bindu885', repo = 'Code-Review-bot';
+            const ref = 'heads/feature/core-review-bot';
+            const {data: branch} = await github.rest.git.getRef({owner, repo, ref});
+            const {data: parent} = await github.rest.git.getCommit({owner, repo, commit_sha: branch.object.sha});
+            const payload = {
+              repository: process.env.TARGET_REPOSITORY,
+              pr_number: Number(process.env.PR_NUMBER),
+              head_sha: process.env.PR_HEAD_SHA,
+              action: 'comment_requested'
+            };
+            const {data: request} = await github.rest.git.createCommit({
+              owner, repo, tree: parent.tree.sha, parents: [branch.object.sha],
+              message: `external-pr-review:${JSON.stringify(payload)}`
+            });
+            await github.rest.git.updateRef({owner, repo, ref, sha: request.sha, force: false});
+
+      - name: Acknowledge the request on the PR
+        if: ${{ always() && steps.command.outputs.requested == 'true' }}
+        uses: actions/github-script@v7
+        env:
+          REQUEST_OUTCOME: ${{ steps.dispatch.outcome }}
+          REQUEST_HEAD: ${{ steps.command.outputs.head }}
+        with:
+          script: |
+            const sent = process.env.REQUEST_OUTCOME === 'success';
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: context.issue.number,
+              body: `${sent ? '**AI review requested**' : '**AI review request failed**'} for commit \`${process.env.REQUEST_HEAD}\`.\n\n${sent ? 'The central reviewer will update the standards-summary comment when finished. This acknowledgement is not an approval.' : 'Check this request run and REVIEW_DISPATCH_TOKEN configuration.'}`
+            });
