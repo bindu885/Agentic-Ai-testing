@@ -26,8 +26,8 @@ jobs:
         with:
           github-token: ${{ secrets.REVIEW_DISPATCH_TOKEN }}
           script: |
-            const owner = 'sanket-thorat';
-            const repo = 'cloud-upskilling-code-review-bot';
+            const owner = 'bindu885';
+            const repo = 'Code-Review-bot';
             const ref = 'heads/feature/core-review-bot';
             const payload = {
               repository: process.env.TARGET_REPOSITORY,

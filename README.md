@@ -3,14 +3,14 @@
 A small order API for testing your external PR reviewer. This repository owns
 only sample application code, application tests, and a thin PR notification
 workflow. All model settings, prompts, guidelines, policy, and review execution
-belong to `sanket-thorat/cloud-upskilling-code-review-bot`.
+belong to `bindu885/Code-Review-bot`.
 
 ## Automatic Review Flow
 
 ```text
 PR in bindu885/Agentic-Ai-testing
   -> create an empty request commit on the reviewer's feature branch
-  -> cloud-upskilling-code-review-bot fetches the PR's changed code
+  -> bindu885/Code-Review-bot fetches the PR's changed code
   -> your configured model reviews it against your guidelines
   -> central Actions run uploads findings and links results from the PR
 ```
@@ -22,8 +22,8 @@ reviewer repository, needed to create an empty commit and advance only
 no longer sends `repository_dispatch` events. Do not put model settings or API
 keys here. Fork PRs are skipped.
 
-Complete the model and token setup in the original repository:
-[central setup guide](https://github.com/sanket-thorat/cloud-upskilling-code-review-bot/blob/feature/core-review-bot/docs/week6/testing-external-repository.md).
+Complete the model and token setup in `bindu885/Code-Review-bot`:
+[central setup guide](https://github.com/bindu885/Code-Review-bot/blob/feature/core-review-bot/docs/week6/testing-external-repository.md).
 Push the updated central workflow and complete reviewer implementation to
 `feature/core-review-bot`; the reviewer does NOT need a merge into `main`.
 The application sample and notification workflow can be merged into this repo's
@@ -31,6 +31,12 @@ The application sample and notification workflow can be merged into this repo's
 the reviewer branch; it never changes reviewer files. GitHub Actions must be
 enabled in both repositories. Use a PAT or GitHub App token for requests, not
 the application's automatic `GITHUB_TOKEN`.
+
+The two repositories share an owner, but their automatic `GITHUB_TOKEN` values
+are still repository-scoped. Configure `REVIEW_DISPATCH_TOKEN` here for
+contents-write access to `bindu885/Code-Review-bot`. Configure `TARGET_REPO_TOKEN`
+in that reviewer repo for contents-read and pull-requests-write access to this
+sample repo. Existing tokens scoped to Sanket's repo must be replaced.
 
 ## Run the Sample
 
