@@ -1,0 +1,38 @@
+name: Request review from my code-review bot
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: request-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  request-review:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send this PR to the central reviewer
+        env:
+          GH_TOKEN: ${{ secrets.REVIEW_DISPATCH_TOKEN }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_EVENT_ACTION: ${{ github.event.action }}
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Add REVIEW_DISPATCH_TOKEN with contents-write access to the reviewer repository."
+            exit 1
+          fi
+          jq -n \
+            --arg repository "$TARGET_REPOSITORY" \
+            --argjson pr_number "$PR_NUMBER" \
+            --arg head_sha "$PR_HEAD_SHA" \
+            --arg action "$PR_EVENT_ACTION" \
+            '{event_type: "external-pr-review", client_payload: {repository: $repository, pr_number: $pr_number, head_sha: $head_sha, action: $action}}' \
+            | gh api repos/sanket-thorat/cloud-upskilling-code-review-bot/dispatches --method POST --input -
+          printf 'Review requested from [your central reviewer](https://github.com/sanket-thorat/cloud-upskilling-code-review-bot/actions/workflows/review-external-pr.yml). Dispatch success means accepted, not review complete.\n' >> "$GITHUB_STEP_SUMMARY"
