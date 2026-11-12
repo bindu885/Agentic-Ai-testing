@@ -5,10 +5,10 @@ only sample application code, application tests, and a thin PR notification
 workflow. All model settings, prompts, guidelines, policy, and review execution
 belong to `bindu885/Code-Review-bot`.
 
-## Automatic Review Flow
+## Review on Request
 
 ```text
-PR in bindu885/Agentic-Ai-testing
+Authorized user comments PR-Review on an open PR
   -> create an empty request commit on the reviewer's feature branch
   -> bindu885/Code-Review-bot fetches the PR's changed code
   -> your configured model reviews it against your guidelines
@@ -26,8 +26,10 @@ Complete the model and token setup in `bindu885/Code-Review-bot`:
 [central setup guide](https://github.com/bindu885/Code-Review-bot/blob/feature/core-review-bot/docs/week6/testing-external-repository.md).
 Push the updated central workflow and complete reviewer implementation to
 `feature/core-review-bot`; the reviewer does NOT need a merge into `main`.
-The application sample and notification workflow can be merged into this repo's
-`main` before creating a defect PR. Each request adds a metadata-only commit to
+The comment-trigger workflow MUST be installed on this repo's default branch,
+`main`, because GitHub reads `issue_comment` workflows from that branch. Install
+only the workflow there; do not merge the deliberately defective validation PR.
+The reviewer implementation remains on its feature branch. Each accepted command adds a metadata-only commit to
 the reviewer branch; it never changes reviewer files. GitHub Actions must be
 enabled in both repositories. Use a PAT or GitHub App token for requests, not
 the application's automatic `GITHUB_TOKEN`.
@@ -73,6 +75,10 @@ def add_label(label: str, labels: list[str] = []) -> list[str]:
 ```
 
 Commit and push that change, then open a PR against the clean base branch.
+Add a new PR conversation comment containing exactly `PR-Review` to request AI
+analysis. Case and surrounding whitespace are ignored. Only writers, maintainers,
+and admins can request a review. Inline code-review comments, issue comments on
+non-PR issues, closed PRs, and fork PRs do not start model review.
 The reviewer should consider `PY-002`; the existing label-isolation test also
 fails on this bug. Do not merge the deliberate defect.
 
@@ -92,17 +98,22 @@ diff, using related files as context; it is not a blanket scan of every old file
 
 ## See the Results
 
-The application Actions run only confirms that the request was sent. The model
+After an accepted command, a PR acknowledgement confirms whether the request was
+sent and names the exact head commit. The model
 runs under **Actions > Review external application PR** in the reviewer repo.
 After successful analysis, the PR receives a comment linking that run's report
 and decision packet. A green request run alone does not mean analysis passed.
 Filter the central Actions page by branch `feature/core-review-bot` if needed.
 The initial workflow deployment push has no request marker, so its review job
-is skipped; a subsequent application PR event starts the actual review.
+is skipped; a subsequent authorized `PR-Review` comment starts the actual review.
 
-Opening, pushing commits to, or reopening a same-repository PR sends a request.
-The existing human-review gate is preserved: a results-link comment is posted
-automatically, but inline findings and approve/request-changes reviews still
+Opening, pushing commits to, or reopening a PR does not request AI analysis.
+After further changes, add a NEW `PR-Review` comment to review the latest head.
+Editing an old command does not start another review. The standards summary is
+updated in place; always check its recorded head commit rather than its original
+creation timestamp. Small changes can proceed without requesting AI review.
+The existing human-review gate is preserved: the standards summary is posted
+after the requested analysis, but formal inline findings and approve/request-changes reviews still
 require human decisions. Nothing is auto-accepted. Readers need access to the
 reviewer repo to download its artifacts.
 
